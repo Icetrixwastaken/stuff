@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galaxy Browser</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
+
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; background: #0b0014;
+    font-family: 'Orbitron', monospace, sans-serif;
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+  }
+
+
+  header {
+    background: linear-gradient(90deg, #4b0082, #1a0033);
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 15px #7b4bff88;
+  }
+
+
+  #urlbar {
+    flex-grow: 1;
+    font-size: 1.1em;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    outline: none;
+    background: #23004d;
+    color: #ddd;
+    box-shadow: inset 0 0 10px #8a5fffcc;
+  }
+
+
+  #goBtn {
+    background: #7b4bff;
+    border: none;
+    padding: 9px 16px;
+    font-weight: 700;
+    color: #eee;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.3s ease;
+    box-shadow: 0 0 12px #9a6bffbb;
+  }
+  #goBtn:hover {
+    background: #a368ff;
+  }
+
+
+  iframe {
+    flex-grow: 1;
+    border: none;
+    width: 100%;
+    background: #000;
+  }
+
+
+  /* subtle starry background */
+  body::before {
+    content: '';
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    pointer-events:none;
+    background:
+      radial-gradient(2px 2px at 20% 15%, #b9aaff88, transparent),
+      radial-gradient(2px 2px at 40% 80%, #b9aaff88, transparent),
+      radial-gradient(2px 2px at 75% 50%, #d7bfff88, transparent),
+      radial-gradient(1.5px 1.5px at 85% 20%, #c9aaff88, transparent),
+      radial-gradient(1.5px 1.5px at 10% 90%, #bb9aff88, transparent);
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    animation: twinkle 20s linear infinite;
+  }
+
+
+  @keyframes twinkle {
+    0%, 100% {background-position: 0 0, 0 0, 0 0, 0 0, 0 0;}
+    50% {background-position: 100px 100px, 50px 50px, 75px 75px, 40px 40px, 10px 10px;}
+  }
+</style>
+</head>
+<body>
+
+
+<header>
+  <input id="urlbar" type="text" placeholder="Enter URL or search term..." autofocus />
+  <button id="goBtn">Go</button>
+</header>
+
+
+<iframe id="browser" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+
+
+<script>
+  const urlbar = document.getElementById('urlbar');
+  const goBtn = document.getElementById('goBtn');
+  const browser = document.getElementById('browser');
+
+
+  // The home page HTML encoded as a data URI
+  const homePageHTML = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galaxy Search</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
+    body {
+      margin: 0; padding: 0;
+      height: 100vh;
+      background: #0b0014;
+      color: #eee;
+      font-family: 'Orbitron', monospace, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      user-select: none;
+    }
+    h1 {
+      font-size: 3em;
+      color: #9b6fff;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 8px #a47fff;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+      width: 90%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    input[type="text"] {
+      flex-grow: 1;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 1.2em;
+      background: #23004d;
+      color: #ddd;
+      box-shadow: inset 0 0 15px #8a5fffcc;
+    }
+    button {
+      padding: 12px 20px;
+      font-weight: 700;
+      background: #7b4bff;
+      border: none;
+      border-radius: 8px;
+      color: #eee;
+      cursor: pointer;
+      box-shadow: 0 0 12px #9a6bffbb;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #a368ff;
+    }
+    small {
+      margin-top: 1rem;
+      display: block;
+      color: #a09fff88;
+    }
+  </style>
+  </head>
+  <body>
+    <h1>Galaxy Search</h1>
+    <form id="searchForm">
+      <input type="text" id="searchInput" autocomplete="off" placeholder="Search or enter URL" autofocus />
+      <button type="submit">Go</button>
+    </form>
+    <small>Powered by DuckDuckGo</small>
+
+
+    <script>
+      function isProbablyURL(str) {
+        return /\\./.test(str) && !/\\s/.test(str);
+      }
+      const form = document.getElementById('searchForm');
+      const input = document.getElementById('searchInput');
+
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        let val = input.value.trim();
+        if (!val) return;
+
+
+        let target = '';
+
+
+        if (isProbablyURL(val)) {
+          val = val.replace(/^https?:\\/\\//, '');
+          target = val;
+        } else {
+          // duckduckgo search query
+          target = 'duckduckgo.com?q=' + encodeURIComponent(val);
+        }
+
+
+        // send message to parent to load embed url
+        parent.postMessage({ type: 'navigate', url: target }, '*');
+      });
+    <\/script>
+  </body>
+  </html>
+  `;
+
+
+  // Encode homePageHTML as base64 data URI
+  const homePageDataUri = 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(homePageHTML)));
+
+
+  // Load homepage by default
+  browser.src = homePageDataUri;
+
+
+  // Utility to detect if input is URL
+  function isProbablyURL(str) {
+    return /\./.test(str) && !/\s/.test(str);
+  }
+
+
+  function navigate(urlOrSearch) {
+    if (!urlOrSearch) return;
+
+
+    let target = '';
+
+
+    if (isProbablyURL(urlOrSearch)) {
+      urlOrSearch = urlOrSearch.replace(/^https?:\/\//, '');
+      target = `https://embeddrr.web.app/embed#${urlOrSearch}`;
+    } else {
+      const q = encodeURIComponent(urlOrSearch);
+      target = `https://embeddrr.web.app/embed#duckduckgo.com?q=${q}`;
+    }
+
+
+    browser.src = target;
+    urlbar.value = urlOrSearch;
+  }
+
+
+  goBtn.addEventListener('click', () => {
+    navigate(urlbar.value.trim());
+  });
+
+
+  urlbar.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      navigate(urlbar.value.trim());
+    }
+  });
+
+
+  // Listen for messages from iframe (our homepage) to navigate
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'navigate' && e.data.url) {
+      navigate(e.data.url);
+    }
+  });
+</script>
+
+
+</body>
+</html>
